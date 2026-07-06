@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IVAN KARAULOV — Cinematographer</title>
+<meta name="description" content="Ivan Karaulov — cinematographer and gaffer based in Toronto. Gaffer on 7+ features including TIFF and Sundance selections; now shooting as a DP.">
+
+<!-- ══════════════════════════════════════════════════════════════
+     HOW TO MAKE THIS YOURS
+     1. YOUR NAME  — search for "IVAN KARAULOV" and replace (3 places).
+     2. YOUR REEL  — put your reel file next to this page and change
+                     the src on the <video id="reel"> tag below
+                     (search for "reel.mp4"). The ASCII hero will
+                     automatically start rendering YOUR footage.
+                     Click the hero to toggle ASCII ↔ real footage.
+     3. STILLS     — each <a class="still"> is one project. Replace
+                     the placeholder <div class="ph …"> with
+                     <img src="stills/yourframe.jpg" alt="…">
+                     and edit the caption + href.
+     4. ABOUT      — edit the bio text and contact links near the
+                     bottom of the page.
+     ══════════════════════════════════════════════════════════════ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:      #0c0c0b;
+  --ink:     #e8e6e0;
+  --dim:     #6f6d66;
+  --line:    #22221f;
+  --rec:     #e0483e;
+  --mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --pad:     clamp(16px, 4vw, 56px);
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--mono);
+  font-size:14px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:var(--ink); color:var(--bg); }
+a{ color:inherit; text-decoration:none; }
+a:focus-visible, button:focus-visible{
+  outline:1px solid var(--ink);
+  outline-offset:4px;
+}
+img{ display:block; width:100%; height:100%; object-fit:cover; }
+
+/* ── top bar ─────────────────────────────────────────── */
+.bar{
+  position:fixed; inset:0 0 auto 0; z-index:20;
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:18px var(--pad);
+  font-size:12px; letter-spacing:.08em;
+  mix-blend-mode:difference;
+  transition:transform .4s ease, opacity .6s ease;
+}
+.bar--hidden{ transform:translateY(-100%); }
+.bar nav{ display:flex; gap:28px; }
+.bar a{ text-transform:uppercase; }
+.bar a:hover{ text-decoration:underline; text-underline-offset:4px; }
+
+/* ── hero ────────────────────────────────────────────── */
+.hero{
+  position:relative;
+  height:100svh;
+  overflow:hidden;
+  cursor:pointer;
+  border-bottom:1px solid var(--line);
+}
+#ascii{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+#reel{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; opacity:0; transition:opacity .5s ease;
+  pointer-events:none;
+}
+.hero.showing-video #reel{ opacity:1; }
+.hero.showing-video #ascii{ opacity:0; }
+.hero.drop-hot{ outline:1px dashed var(--dim); outline-offset:-8px; }
+#ascii{ transition:opacity .5s ease; }
+
+/* Legibility scrims: fade the ASCII to background top & bottom so the
+   HUD text reads cleanly while the ASCII stays edge-to-edge in the middle.
+   Sit above the canvas (z:0) but below the HUD (z:5). */
+.hero::before, .hero::after{
+  content:""; position:absolute; left:0; right:0; z-index:2;
+  pointer-events:none;
+}
+.hero::before{
+  top:0; height:42%;
+  background:linear-gradient(to bottom,
+    rgba(12,12,11,.98) 0%, rgba(12,12,11,.7) 48%, rgba(12,12,11,0) 100%);
+  transition:opacity .5s ease;
+}
+.hero::after{
+  bottom:0; height:52%;
+  background:linear-gradient(to top,
+    rgba(12,12,11,1) 0%, rgba(12,12,11,.78) 44%, rgba(12,12,11,0) 100%);
+  transition:opacity .5s ease;
+}
+/* Footage doesn't need the heavy scrim — fade them back to a light
+   gradient that only protects the HUD text. */
+.hero.showing-video::before{
+  height:30%;
+  background:linear-gradient(to bottom,
+    rgba(12,12,11,.6) 0%, rgba(12,12,11,.28) 45%, rgba(12,12,11,0) 100%);
+}
+.hero.showing-video::after{
+  height:34%;
+  background:linear-gradient(to top,
+    rgba(12,12,11,.7) 0%, rgba(12,12,11,.32) 45%, rgba(12,12,11,0) 100%);
+}
+
+.hero-hud{
+  position:absolute; inset:0; z-index:5; pointer-events:none;
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:calc(18px + 44px) var(--pad) 28px;
+  font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+  transition:opacity .6s ease;
+}
+/* Idle auto-hide: after a few seconds without activity (while the hero is
+   on screen) the HUD, title, and nav fade away like a video player's
+   controls. Any move / scroll / tap brings them straight back. */
+body.reel-idle .hero-hud{ opacity:0; pointer-events:none; }
+body.reel-idle .bar{ opacity:0; pointer-events:none; }
+body.reel-idle .hero{ cursor:none; }
+/* controls gone → the scrim has nothing to protect, so clear it too */
+body.reel-idle .hero::before,
+body.reel-idle .hero::after{ opacity:0; }
+.hud-top{ display:flex; justify-content:space-between; align-items:center; color:var(--dim); }
+.hud-right{ display:flex; align-items:center; gap:18px; pointer-events:auto; }
+.mute{
+  font-family:var(--mono); font-size:12px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink);
+  background:transparent; border:1px solid var(--line);
+  padding:5px 12px; cursor:pointer;
+  display:inline-flex; align-items:center; gap:8px;
+  transition:border-color .2s ease, background .2s ease;
+}
+.mute:hover{ border-color:var(--dim); }
+.mute[data-muted="false"]{ border-color:var(--ink); background:rgba(232,230,224,.06); }
+.mute .dot{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--dim); transition:background .2s ease;
+}
+.mute[data-muted="false"] .dot{ background:var(--ink); }
+.rec{ display:inline-flex; align-items:center; gap:8px; color:var(--ink); }
+.rec::before{
+  content:""; width:8px; height:8px; border-radius:50%;
+  background:var(--rec);
+  animation:blink 1.4s steps(1) infinite;
+}
+@keyframes blink{ 50%{ opacity:.15; } }
+
+.hud-bottom{ display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap; }
+#asciiName{
+  font-size:clamp(6px, 1.5vw, 13px);
+  line-height:0.62;               /* mono cells are ~0.6 wide; match height so blocks read square, not tall-thin */
+  letter-spacing:0;
+  text-transform:none;
+  white-space:pre;
+  color:var(--ink);
+}
+.hero-cta{
+  display:flex; flex-direction:column; align-items:flex-end; gap:9px;
+  pointer-events:auto;
+}
+.switch{
+  font-family:var(--mono); font-size:13px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--bg);
+  background:var(--ink); border:1px solid var(--ink);
+  padding:10px 18px; cursor:pointer;
+  display:inline-flex; align-items:center; gap:11px;
+  transition:transform .18s ease, background .25s ease, color .25s ease, box-shadow .25s ease;
+  box-shadow:0 0 0 0 rgba(232,230,224,0);
+}
+.switch:hover{ transform:translateY(-1px); box-shadow:0 6px 20px -8px rgba(232,230,224,.5); }
+.switch:active{ transform:translateY(0); }
+/* attention pulse so the control reads as the primary action */
+.switch[data-mode="ascii"]{ animation:pulse 2.6s ease-in-out infinite; }
+@keyframes pulse{
+  0%,100%{ box-shadow:0 0 0 0 rgba(232,230,224,.0); }
+  50%{ box-shadow:0 0 0 4px rgba(232,230,224,.14); }
+}
+/* icon: a play triangle in ASCII mode, a stop square in footage mode */
+.switch-ico{
+  width:10px; height:12px; flex:none; position:relative;
+  transition:transform .3s cubic-bezier(.3,.7,.2,1);
+}
+.switch-ico::before{
+  content:""; position:absolute; inset:0;
+  background:var(--bg);
+  clip-path:polygon(0 0, 100% 50%, 0 100%);  /* ▶ play */
+  transition:clip-path .3s ease;
+}
+.switch[data-mode="video"]{ background:transparent; color:var(--ink); animation:none; }
+.switch[data-mode="video"] .switch-ico::before{
+  background:var(--ink);
+  clip-path:polygon(15% 15%, 85% 15%, 85% 85%, 15% 85%);  /* ■ stop/back */
+}
+.switch[data-mode="video"] .switch-ico{ transform:rotate(90deg); }
+.switch-note{ color:var(--dim); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+
+.hero-cta b{ color:var(--ink); font-weight:500; }
+
+/* ── section shell ───────────────────────────────────── */
+section{ padding:clamp(64px,10vh,120px) var(--pad); }
+.sec-label{
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--dim);
+  border-bottom:1px solid var(--line);
+  padding-bottom:14px; margin-bottom:clamp(32px,5vh,56px);
+}
+
+/* ── work: projects, each = 4 stills linking to the film ─────── */
+.projects{ display:flex; flex-direction:column; gap:clamp(46px,7vh,86px); }
+
+.project{ display:block; }
+.project-head{
+  display:flex; justify-content:space-between; align-items:baseline; gap:20px;
+  padding-bottom:12px; margin-bottom:clamp(12px,1.6vw,18px);
+  border-bottom:1px solid var(--line);
+  transition:border-color .3s ease;
+}
+.project:hover .project-head{ border-color:var(--dim); }
+.project-id{
+  display:flex; align-items:baseline; gap:14px; min-width:0;
+}
+.project-id .num{ color:var(--dim); font-size:12px; letter-spacing:.08em; }
+.project-title{ font-size:clamp(15px,1.9vw,21px); letter-spacing:.01em; }
+.project-meta{
+  color:var(--dim); font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  white-space:nowrap;
+}
+
+/* hover-revealed "Watch on …" link */
+.watch{
+  display:inline-flex; align-items:center; gap:9px; white-space:nowrap;
+  font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--dim); transition:color .25s ease;
+}
+.watch .lbl{ position:relative; }
+.watch .lbl::after{
+  content:""; position:absolute; left:0; bottom:-3px; width:100%; height:1px;
+  background:var(--ink); transform:scaleX(0); transform-origin:left;
+  transition:transform .3s ease;
+}
+.watch .arrow{ transition:transform .25s ease; }
+.project:hover .watch, .project:focus-visible .watch{ color:var(--ink); }
+.project:hover .watch .lbl::after, .project:focus-visible .watch .lbl::after{ transform:scaleX(1); }
+.project:hover .watch .arrow, .project:focus-visible .watch .arrow{ transform:translate(3px,-3px); }
+
+/* four-still strip */
+.stills4{
+  position:relative;
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:clamp(8px,0.9vw,14px);
+}
+.shot{
+  position:relative; overflow:hidden;
+  aspect-ratio:16/9; background:var(--line);
+}
+.shot > .ph, .shot > img{
+  position:absolute; inset:0;
+  transition:transform .6s cubic-bezier(.2,.6,.2,1), filter .4s ease;
+}
+.project:hover .shot > .ph, .project:hover .shot > img{ transform:scale(1.04); }
+
+/* play cue fades in over the strip on hover — signals it opens the film */
+.play-cue{
+  position:absolute; inset:0; z-index:3; pointer-events:none;
+  display:grid; place-items:center;
+  background:rgba(12,12,11,.28);
+  opacity:0; transition:opacity .3s ease;
+}
+.project:hover .play-cue, .project:focus-visible .play-cue{ opacity:1; }
+.play-cue span{
+  width:54px; height:54px; border-radius:50%;
+  border:1px solid var(--ink);
+  display:grid; place-items:center;
+  background:rgba(12,12,11,.35);
+  transform:scale(.9); transition:transform .3s cubic-bezier(.3,.7,.2,1);
+}
+.project:hover .play-cue span{ transform:scale(1); }
+.play-cue span::before{
+  content:""; width:0; height:0;
+  border-left:13px solid var(--ink);
+  border-top:8px solid transparent; border-bottom:8px solid transparent;
+  margin-left:3px;
+}
+
+/* placeholder stills — delete once real frames are in */
+.ph{ width:100%; height:100%; position:relative; }
+.ph::after{ /* film grain */
+  content:""; position:absolute; inset:0; opacity:.16; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
+}
+.ph-1{ background:linear-gradient(105deg,#1a2233 0%,#3d4f6b 45%,#c98a4b 78%,#f2c186 100%); }
+.ph-2{ background:linear-gradient(160deg,#0e1a12 0%,#274d33 55%,#87a06b 100%); }
+.ph-3{ background:linear-gradient(120deg,#2a1026 0%,#7b2d5e 50%,#e15b8f 90%); }
+.ph-4{ background:linear-gradient(180deg,#101418 0%,#2b3a45 60%,#9fb6c4 100%); }
+.ph-5{ background:linear-gradient(95deg,#221a10 0%,#5c452a 55%,#d8b26a 100%); }
+.ph-6{ background:linear-gradient(135deg,#101015 0%,#3a2f4d 55%,#8a6fb0 100%); }
+.ph-7{ background:linear-gradient(75deg,#0d1417 0%,#2f4a4d 50%,#79b0a6 100%); }
+.ph-8{ background:linear-gradient(200deg,#1a0f0d 0%,#5c2f28 55%,#c47a5a 100%); }
+
+/* ── about ───────────────────────────────────────────── */
+.about-grid{
+  display:grid; grid-template-columns:repeat(12,1fr);
+  gap:clamp(24px,3vw,40px);
+}
+.about-copy{ grid-column:1 / span 7; font-size:clamp(15px,1.5vw,19px); line-height:1.75; }
+.about-copy p + p{ margin-top:1.2em; }
+.about-meta{ grid-column:9 / span 4; font-size:12px; letter-spacing:.06em; }
+.about-meta h3{
+  font-size:12px; font-weight:500; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--dim); margin-bottom:10px;
+}
+.about-meta ul{ list-style:none; margin-bottom:28px; }
+.about-meta li{ padding:6px 0; border-bottom:1px solid var(--line); }
+.about-meta a:hover{ text-decoration:underline; text-underline-offset:4px; }
+
+/* ── footer ──────────────────────────────────────────── */
+footer{
+  display:flex; justify-content:space-between; align-items:baseline;
+  gap:16px; flex-wrap:wrap;
+  padding:24px var(--pad) 28px;
+  border-top:1px solid var(--line);
+  font-size:12px; letter-spacing:.08em; color:var(--dim);
+  text-transform:uppercase;
+}
+footer a{ color:var(--ink); }
+footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
+
+/* ── responsive ──────────────────────────────────────── */
+@media (max-width:820px){
+  .stills4{ grid-template-columns:repeat(2,1fr); }
+  .project-head{ flex-direction:column; align-items:flex-start; gap:8px; }
+  .about-copy{ grid-column:1 / span 12; }
+  .about-meta{ grid-column:1 / span 12; }
+  .bar nav{ gap:18px; }
+  #asciiName{ font-size:5.5px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  .rec::before{ animation:none; }
+  .shot > .ph, .shot > img{ transition:none; }
+  #ascii,#reel{ transition:none; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <a href="#top">IVAN KARAULOV — DOP</a>
+  <nav>
+    <a href="#work">Work</a>
+    <a href="#about">About</a>
+    <a href="mailto:hello@example.com">Contact</a>
+  </nav>
+</header>
+
+<!-- ═══ HERO / REEL ═══ -->
+<div class="hero" id="top" role="button" tabindex="0"
+     aria-label="Showreel. Press to toggle between ASCII render and real footage.">
+  <canvas id="ascii" aria-hidden="true"></canvas>
+
+  <!-- 2. YOUR REEL: change src="reel.mp4" to your file.
+       NOTE: do NOT add crossorigin unless the reel is hosted on a
+       DIFFERENT domain that sends CORS headers. For a same-folder
+       reel it breaks local (file://) loading. -->
+  <video id="reel" src="reel.mp4" muted loop playsinline preload="auto"></video>
+
+  <div class="hero-hud">
+    <div class="hud-top">
+      <span class="rec">REC — SHOWREEL 2026</span>
+      <div class="hud-right">
+        <span id="tc">00:00:00:00</span>
+        <button class="mute" id="mute" type="button" data-muted="true"
+                aria-pressed="true" aria-label="Unmute reel">
+          <span class="dot" aria-hidden="true"></span><span id="muteLabel">Sound off</span>
+        </button>
+      </div>
+    </div>
+    <div class="hud-bottom">
+      <pre id="asciiName" aria-label="IVAN KARAULOV"></pre>
+      <div class="hero-cta">
+        <button class="switch" id="switch" type="button"
+                data-mode="ascii" aria-pressed="false"
+                aria-label="Show real footage">
+          <span class="switch-ico" aria-hidden="true"></span>
+          <span id="switchLabel">Play footage</span>
+        </button>
+        <span class="switch-note" id="cta">ASCII render live</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SELECTED WORK ═══ -->
+<section id="work">
+  <div class="sec-label"><span>Selected work</span><span>2024 — 2026</span></div>
+
+  <div class="projects">
+    <!-- ONE PROJECT = 4 stills + a link to the film.
+         · href → the YouTube/Vimeo URL where the film lives
+         · swap each <img src="web_stills/…"> for your frames
+         For a film with no video link, use a plain <div class="project">
+         (no href) and drop the .watch span and .play-cue. -->
+
+    <a class="project" href="https://vimeo.com/945072656/27de6edbcd?fl=pl&fe=vl" target="_blank" rel="noopener"
+       aria-label="First Place — watch on Vimeo">
+      <div class="project-head">
+        <span class="project-id">
+          <span class="num">01</span>
+          <span class="project-title">First Place</span>
+        </span>
+        <span class="project-meta">Short film · dir. Kabir Birk · 4:3</span>
+        <span class="watch">
+          <span class="lbl">Watch on Vimeo</span><span class="arrow" aria-hidden="true">↗</span>
+        </span>
+      </div>
+      <div class="stills4">
+        <div class="shot"><img src="web_stills/pall2.jpeg" alt="First Place — still 1"></div>
+        <div class="shot"><img src="web_stills/pall3.jpeg" alt="First Place — still 2"></div>
+        <div class="shot"><img src="web_stills/pall5.jpeg" alt="First Place — still 3"></div>
+        <div class="shot"><img src="web_stills/pall6.jpeg" alt="First Place — still 4"></div>
+        <div class="play-cue"><span aria-hidden="true"></span></div>
+      </div>
+    </a>
+
+    <a class="project" href="https://vimeo.com/1081878387?fl=pl&fe=ti" target="_blank" rel="noopener"
+       aria-label="Sanzaar - Bagicha — watch on Vimeo">
+      <div class="project-head">
+        <span class="project-id">
+          <span class="num">02</span>
+          <span class="project-title">Sanzaar - Bagicha</span>
+        </span>
+        <span class="project-meta">Fashion film · 16:9</span>
+        <span class="watch">
+          <span class="lbl">Watch on Vimeo</span><span class="arrow" aria-hidden="true">↗</span>
+        </span>
+      </div>
+      <div class="stills4">
+        <div class="shot"><img src="web_stills/bagicha1.jpg" alt="Sanzaar Bagicha — still 1"></div>
+        <div class="shot"><img src="web_stills/bagicha2.jpg" alt="Sanzaar Bagicha — still 2"></div>
+        <div class="shot"><img src="web_stills/bagicha3.jpg" alt="Sanzaar Bagicha — still 3"></div>
+        <div class="shot"><img src="web_stills/bagicha4.jpg" alt="Sanzaar Bagicha — still 4"></div>
+        <div class="play-cue"><span aria-hidden="true"></span></div>
+      </div>
+    </a>
+
+    <a class="project" href="https://www.youtube.com/watch?v=QwYHSsc1K6k" target="_blank" rel="noopener"
+       aria-label="OLEG - Escape to Saint-Tropez — watch on YouTube">
+      <div class="project-head">
+        <span class="project-id">
+          <span class="num">03</span>
+          <span class="project-title">Escape to Saint-Tropez</span>
+        </span>
+        <span class="project-meta">Music video · dir. OLEG · 16:9</span>
+        <span class="watch">
+          <span class="lbl">Watch on YouTube</span><span class="arrow" aria-hidden="true">↗</span>
+        </span>
+      </div>
+      <div class="stills4">
+        <div class="shot"><img src="web_stills/oleg1.jpg" alt="Escape to Saint-Tropez — still 1"></div>
+        <div class="shot"><img src="web_stills/oleg2.jpg" alt="Escape to Saint-Tropez — still 2"></div>
+        <div class="shot"><img src="web_stills/oleg3.jpg" alt="Escape to Saint-Tropez — still 3"></div>
+        <div class="shot"><img src="web_stills/oleg4.jpg" alt="Escape to Saint-Tropez — still 4"></div>
+        <div class="play-cue"><span aria-hidden="true"></span></div>
+      </div>
+    </a>
+
+    <div class="project" aria-label="Mela&amp;Kera">
+      <div class="project-head">
+        <span class="project-id">
+          <span class="num">04</span>
+          <span class="project-title">Mela&amp;Kera</span>
+        </span>
+        <span class="project-meta">Commercial · 16:9</span>
+      </div>
+      <div class="stills4">
+        <div class="shot"><img src="web_stills/mela_kera1.jpg" alt="Mela&amp;Kera — still 1"></div>
+        <div class="shot"><img src="web_stills/mela_kera2.jpg" alt="Mela&amp;Kera — still 2"></div>
+        <div class="shot"><img src="web_stills/mela_kera3.jpg" alt="Mela&amp;Kera — still 3"></div>
+        <div class="shot"><img src="web_stills/mela_kera4.jpg" alt="Mela&amp;Kera — still 4"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ABOUT ═══ -->
+<section id="about">
+  <div class="sec-label"><span>About</span><span>Toronto, CA</span></div>
+
+  <div class="about-grid">
+    <div class="about-copy">
+      <!-- 4. YOUR BIO -->
+      <p>Ivan Karaulov is a Toronto-based cinematographer and gaffer, born in
+      Volgograd, Russia. He started at 13 with BMX videos and by 16 was shooting
+      music videos for artists like Pharaoh and Slava KPSS. He lived and worked
+      in Moscow before relocating to Toronto in 2018.</p>
+      <p>He's worked as a gaffer and key grip on every kind of set — from
+      one-man-band shoots to tier-A union productions, including projects
+      selected for TIFF and Sundance. That range made him fast and adaptable:
+      the person who finds a solution whatever the budget, crew, or location
+      allows.</p>
+      <p>As a director of photography he takes his cues from music, 80s cinema,
+      the luminous seas of Aivazovsky and the color of Roerich, and the ordinary
+      light he notices on the street.</p>
+    </div>
+
+    <div class="about-meta">
+      <h3>Services</h3>
+      <ul>
+        <li>Cinematography / DOP</li>
+        <li>Camera operation</li>
+        <li>Color-aware on-set workflow</li>
+      </ul>
+      <h3>Contact</h3>
+      <ul>
+        <li><a href="mailto:hello@example.com">hello@example.com</a></li>
+        <li><a href="https://www.imdb.com/name/nm12017961/" rel="noopener" target="_blank">IMDb ↗</a></li>
+        <li><a href="#" rel="noopener">Vimeo ↗</a></li>
+        <li><a href="#" rel="noopener">Instagram ↗</a></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>© 2026 IVAN KARAULOV</span>
+  <span>Shot, graded, and coded with care</span>
+  <a href="#top">Back to top ↑</a>
+</footer>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   ASCII ENGINE
+   Renders the hero as live ASCII. If reel.mp4 loads, it
+   ASCII-fies your footage; until then it plays a procedural
+   film-leader countdown so the page never looks empty.
+   ════════════════════════════════════════════════════════ */
+(function(){
+  const canvas = document.getElementById('ascii');
+  const ctx    = canvas.getContext('2d', { alpha:false });
+  const video  = document.getElementById('reel');
+  const hero   = document.querySelector('.hero');
+  const cta    = document.getElementById('cta');
+  const tcEl   = document.getElementById('tc');
+
+  const RAMP = ' .:-=+*#%@';
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // low-res sampling buffer
+  const buf  = document.createElement('canvas');
+  const bctx = buf.getContext('2d', { willReadFrequently:true });
+
+  let cellH = 14, cellW, cols, rows, hasVideo = false;
+
+  function size(){
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const w = hero.clientWidth, h = hero.clientHeight;
+    cellH = w < 700 ? 10 : 14;
+    cellW = cellH * 0.6;
+    cols = Math.floor(w / cellW);
+    rows = Math.floor(h / cellH);
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.font = cellH + 'px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'top';
+    buf.width = cols; buf.height = rows;
+  }
+
+  /* — procedural film-leader countdown (placeholder scene) —
+       Char cells render ~0.6x as wide as tall, so anything drawn 1:1 in
+       cell space looks horizontally squished on screen. We pre-stretch the
+       round/text elements by 1/aspect around center to counteract that. */
+  function drawLeader(t){
+    const w = cols, h = rows;
+    bctx.fillStyle = '#161616';
+    bctx.fillRect(0,0,w,h);
+    const cx = w/2, cy = h/2;
+    const aspect = cellW / cellH;      // ~0.6
+    const R = h * 0.42;                // vertical radius (cells)
+
+    // crosshair spans the whole frame — drawn untransformed
+    bctx.strokeStyle = '#8a8a8a'; bctx.lineWidth = 1;
+    bctx.beginPath();
+    bctx.moveTo(cx,0); bctx.lineTo(cx,h);
+    bctx.moveTo(0,cy); bctx.lineTo(w,cy);
+    bctx.stroke();
+
+    bctx.save();
+    bctx.translate(cx, cy);
+    bctx.scale(1/aspect, 1);            // stretch x so circles read round
+
+    // rotating sweep
+    const a = (t % 1) * Math.PI * 2 - Math.PI/2;
+    bctx.fillStyle = '#3a3a3a';
+    bctx.beginPath();
+    bctx.moveTo(0,0);
+    bctx.arc(0,0,R,-Math.PI/2,a);
+    bctx.closePath();
+    bctx.fill();
+
+    // rings
+    bctx.strokeStyle = '#8a8a8a'; bctx.lineWidth = 1;
+    bctx.beginPath(); bctx.arc(0,0,R,0,7); bctx.stroke();
+    bctx.beginPath(); bctx.arc(0,0,R*0.72,0,7); bctx.stroke();
+
+    // countdown number 8 → 2
+    const n = 8 - (Math.floor(t) % 7);
+    bctx.fillStyle = '#f0f0f0';
+    bctx.font = 'bold ' + Math.floor(h*0.6) + 'px "IBM Plex Mono", monospace';
+    bctx.textAlign = 'center'; bctx.textBaseline = 'middle';
+    bctx.fillText(String(n), 0, h*0.02);
+    bctx.restore();
+
+    // sparse grain — full frame, untransformed
+    bctx.fillStyle = 'rgba(255,255,255,.25)';
+    for (let i=0;i<w*h*0.004;i++){
+      bctx.fillRect(Math.random()*w, Math.random()*h, 1, 1);
+    }
+  }
+
+  let taintFail = false;   // set true if the video ever taints the canvas
+
+  function render(t){
+    // If sampling the video isn't possible (cross-origin taint), we've
+    // already switched to showing the real <video>, so skip ASCII work.
+    if (taintFail) return;
+
+    const usingVideo = hasVideo && video.readyState >= 2 && !video.paused;
+    if (usingVideo){
+      bctx.drawImage(video, 0, 0, cols, rows);
+    } else {
+      drawLeader(t/1000);
+    }
+
+    let px;
+    try {
+      px = bctx.getImageData(0,0,cols,rows).data;
+    } catch (err) {
+      // SecurityError = the video is cross-origin without CORS headers and
+      // tainted the canvas. Rather than freeze, reveal the real footage.
+      console.warn('ASCII sampling blocked (cross-origin video). Showing footage instead.', err);
+      taintFail = true;
+      hero.classList.add('showing-video');
+      cta.innerHTML = '<b>Footage playing</b><br>ASCII needs same-origin video';
+      return;
+    }
+
+    ctx.fillStyle = '#0c0c0b';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#e8e6e0';
+    let line;
+    for (let y=0; y<rows; y++){
+      line = '';
+      for (let x=0; x<cols; x++){
+        const i = (y*cols + x) * 4;
+        const lum = (px[i]*0.2126 + px[i+1]*0.7152 + px[i+2]*0.0722) / 255;
+        line += RAMP[Math.min(RAMP.length-1, Math.floor(lum * RAMP.length))];
+      }
+      ctx.fillText(line, 0, y*cellH);
+    }
+  }
+
+  let last = 0;
+  function loop(t){
+    if (t - last > 1000/24){ render(t); last = t; }  // 24 fps, naturally
+    updateTC(t);
+    if (!reduced) requestAnimationFrame(loop);
+  }
+
+  /* — running timecode, 24 fps — */
+  function updateTC(t){
+    const f  = Math.floor(t/1000*24);
+    const fr = f % 24, s = Math.floor(f/24) % 60,
+          m  = Math.floor(f/1440) % 60, h = Math.floor(f/86400);
+    const p  = n => String(n).padStart(2,'0');
+    tcEl.textContent = p(h)+':'+p(m)+':'+p(s)+':'+p(fr);
+  }
+
+  /* — reel detection + toggle — */
+  const isFileProto = location.protocol === 'file:';
+
+  video.addEventListener('canplay', () => {
+    hasVideo = true;
+    taintFail = false;
+    video.play().catch(()=>{});   // autoplay allowed only while muted
+    note.textContent = mode === 'video' ? 'Footage playing' : 'ASCII render live';
+  });
+  video.addEventListener('error', () => {
+    hasVideo = false;
+    note.textContent = isFileProto
+      ? 'Can\u2019t load over file:// — drag a video here'
+      : 'reel.mp4 not found — drop a video here';
+  });
+
+  /* Drag-and-drop a local video → loads it as a same-origin blob so the
+     ASCII effect works even when opened as a plain file (file://). */
+  function loadLocal(file){
+    if (!file || !file.type.startsWith('video/')) return;
+    video.src = URL.createObjectURL(file);
+    video.load();
+    hero.classList.remove('showing-video');
+    setMode('ascii');
+    note.textContent = 'Loading ' + file.name + '\u2026';
+  }
+  ['dragenter','dragover'].forEach(ev =>
+    hero.addEventListener(ev, e => { e.preventDefault(); hero.classList.add('drop-hot'); }));
+  ['dragleave','drop'].forEach(ev =>
+    hero.addEventListener(ev, e => { e.preventDefault(); hero.classList.remove('drop-hot'); }));
+  hero.addEventListener('drop', e => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    loadLocal(f);
+  });
+
+  /* View toggle (ASCII ⇄ footage) — clean crossfade, no sweep. */
+  const switchBtn   = document.getElementById('switch');
+  const switchLabel = document.getElementById('switchLabel');
+  const note        = document.getElementById('cta');   // the small status line
+  let mode = 'ascii';
+
+  function setMode(m){
+    mode = m;
+    switchBtn.dataset.mode = m;
+    switchBtn.setAttribute('aria-pressed', String(m === 'video'));
+    switchBtn.setAttribute('aria-label', m === 'video' ? 'Show ASCII render' : 'Show real footage');
+    switchLabel.textContent = m === 'video' ? 'ASCII view' : 'Play footage';
+    note.textContent        = m === 'video' ? 'Footage playing' : 'ASCII render live';
+  }
+
+  function toggle(){
+    if (!hasVideo && !taintFail){
+      note.textContent = 'Add reel.mp4 — ASCII leader playing';
+      return;
+    }
+    const showing = !hero.classList.contains('showing-video');
+    hero.classList.toggle('showing-video', showing);
+    setMode(showing ? 'video' : 'ascii');
+  }
+
+  // Clicking the button toggles; stop it bubbling to the hero click.
+  switchBtn.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+  switchBtn.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
+  });
+
+  // The rest of the hero stays clickable as a big secondary target.
+  hero.addEventListener('click', toggle);
+  hero.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
+  });
+
+  /* Dedicated mute button — independent of the view, and it must not
+     bubble up to the hero click (which would toggle ASCII/footage). */
+  const muteBtn   = document.getElementById('mute');
+  const muteLabel = document.getElementById('muteLabel');
+  function setMuted(m){
+    video.muted = m;
+    muteBtn.dataset.muted = String(m);
+    muteBtn.setAttribute('aria-pressed', String(m));
+    muteBtn.setAttribute('aria-label', m ? 'Unmute reel' : 'Mute reel');
+    muteLabel.textContent = m ? 'Sound off' : 'Sound on';
+  }
+  muteBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    // A user gesture lets us unmute; if the reel wasn't playing, start it.
+    setMuted(!video.muted);
+    if (!video.muted && hasVideo && video.paused) video.play().catch(()=>{});
+  });
+  muteBtn.addEventListener('keydown', e => e.stopPropagation());
+
+  /* ── Idle auto-hide (video-player style) ──────────────────────────
+     Fade the HUD + title + nav after IDLE_MS of no activity, but only
+     while the hero is actually on screen. Any activity wakes it. */
+  const IDLE_MS = 3200;
+  let idleTimer = null, heroInView = true;
+
+  function wake(){
+    document.body.classList.remove('reel-idle');
+    clearTimeout(idleTimer);
+    if (heroInView){
+      idleTimer = setTimeout(() => {
+        if (heroInView) document.body.classList.add('reel-idle');
+      }, IDLE_MS);
+    }
+  }
+
+  ['mousemove','mousedown','wheel','scroll','keydown','touchstart']
+    .forEach(ev => addEventListener(ev, wake, { passive:true }));
+
+  // Only arm the timer when the hero is visible; if it scrolls away,
+  // reveal everything and stop hiding.
+  if ('IntersectionObserver' in window){
+    new IntersectionObserver(entries => {
+      heroInView = entries[0].isIntersecting;
+      wake();
+    }, { threshold:0.35 }).observe(hero);
+  }
+  wake();  // start the first idle countdown
+
+  /* ── Auto-hide the top bar on scroll-down (prevents it overlapping
+     the work/about content), reveal on scroll-up or near the top. ── */
+  const bar = document.querySelector('.bar');
+  let lastY = window.scrollY, barHidden = false;
+  addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const goingDown = y > lastY;
+    if (goingDown && y > 140 && !barHidden){
+      bar.classList.add('bar--hidden'); barHidden = true;
+    } else if ((!goingDown || y <= 140) && barHidden){
+      bar.classList.remove('bar--hidden'); barHidden = false;
+    }
+    lastY = y;
+  }, { passive:true });
+
+  addEventListener('resize', () => { size(); if (reduced) render(2600); });
+  size();
+  if (reduced){ render(2600); updateTC(0); }  // single static frame
+  else requestAnimationFrame(loop);
+
+  /* — name → ASCII block letters (1. rendered automatically) —
+       Long names stack: each array entry becomes its own line.   */
+  const NAME_LINES = ['IVAN', 'KARAULOV'];
+  const nc = document.createElement('canvas');
+  const nx = nc.getContext('2d', { willReadFrequently:true });
+  const LINE_H = 14;
+  const NW = Math.max(...NAME_LINES.map(l => l.length)) * 12 + 4;
+  const NH = LINE_H * NAME_LINES.length;
+  nc.width = NW; nc.height = NH;
+  function drawName(){
+    nx.fillStyle='#000'; nx.fillRect(0,0,NW,NH);
+    nx.fillStyle='#fff';
+    nx.font = 'bold 13px "IBM Plex Mono", monospace';
+    nx.textBaseline = 'middle';
+    NAME_LINES.forEach((line, i) => {
+      nx.fillText(line, 2, i * LINE_H + LINE_H/2 + 1);
+    });
+    const d = nx.getImageData(0,0,NW,NH).data;
+    let out = '';
+    for (let y=0; y<NH; y++){
+      let row = '';
+      for (let x=0; x<NW; x++){
+        const v = d[(y*NW+x)*4] / 255;
+        row += v > .66 ? '█' : v > .33 ? '▓' : v > .12 ? '░' : ' ';
+      }
+      out += row.replace(/\s+$/,'') + '\n';
+    }
+    document.getElementById('asciiName').textContent = out;
+  }
+  // wait for the webfont so the sampled letterforms match the site
+  if (document.fonts && document.fonts.ready){
+    document.fonts.ready.then(drawName);
+  }
+  drawName();
+})();
+</script>
+</body>
+</html>
