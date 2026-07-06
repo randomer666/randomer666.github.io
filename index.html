@@ -210,6 +210,31 @@ body.reel-idle .hero::after{ opacity:0; }
 .switch[data-mode="video"] .switch-ico{ transform:rotate(90deg); }
 .switch-note{ color:var(--dim); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
 
+/* mobile-only "Full reel" button — opens the uncropped reel in a popup */
+.fullreel{ display:none; }
+.fullreel-note{ display:none; }
+
+/* fullscreen reel popup (letterboxed, nothing cropped) */
+.reel-modal{
+  position:fixed; inset:0; z-index:60; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(6,6,5,.95);
+  padding:12px;
+}
+.reel-modal.open{ display:flex; }
+.reel-modal video{
+  width:100%; height:auto; max-height:100%;
+  object-fit:contain; background:#000;
+}
+.reel-modal__close{
+  position:absolute; top:calc(14px + env(safe-area-inset-top)); right:16px;
+  width:42px; height:42px; z-index:2;
+  border:1px solid var(--line); background:rgba(12,12,11,.65);
+  color:var(--ink); font-family:var(--mono); font-size:18px; line-height:1;
+  cursor:pointer;
+}
+.reel-modal__close:hover{ border-color:var(--dim); }
+
 .hero-cta b{ color:var(--ink); font-weight:500; }
 
 /* ── section shell ───────────────────────────────────── */
@@ -350,6 +375,13 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
   .about-meta{ grid-column:1 / span 12; }
   .bar nav{ gap:18px; }
   #asciiName{ font-size:5.5px; }
+  .fullreel{
+    display:inline-flex; align-items:center; gap:8px; pointer-events:auto;
+    font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink); background:transparent; border:1px solid var(--line);
+    padding:8px 14px; cursor:pointer;
+  }
+  .fullreel:active{ background:rgba(232,230,224,.06); }
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -404,6 +436,9 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
           <span id="switchLabel">Play footage</span>
         </button>
         <span class="switch-note" id="cta">ASCII render live</span>
+        <button class="fullreel" id="fullreel" type="button" aria-label="Open full reel">
+          <span aria-hidden="true">⤢</span> Full reel
+        </button>
       </div>
     </div>
   </div>
@@ -537,6 +572,12 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
     </div>
   </div>
 </section>
+
+<!-- fullscreen reel popup (opened by the mobile "Full reel" button) -->
+<div class="reel-modal" id="reelModal" role="dialog" aria-modal="true" aria-label="Full reel" aria-hidden="true">
+  <button class="reel-modal__close" id="reelClose" type="button" aria-label="Close reel">✕</button>
+  <video id="reelFull" playsinline controls preload="none"></video>
+</div>
 
 <footer>
   <span>© 2026 IVAN KARAULOV</span>
@@ -738,6 +779,39 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
   }
   ['touchstart','pointerdown','click'].forEach(ev =>
     addEventListener(ev, ensurePlaying, { once:true, passive:true }));
+
+  /* ── Full-reel popup (mobile) — plays the reel uncropped (letterboxed)
+     with native controls, so nothing gets cut off by the hero crop. ── */
+  const fullBtn    = document.getElementById('fullreel');
+  const modal      = document.getElementById('reelModal');
+  const modalVideo = document.getElementById('reelFull');
+  const modalClose = document.getElementById('reelClose');
+
+  function openReel(){
+    // Reuse whichever source the hero resolved to (same file = cached).
+    if (!modalVideo.getAttribute('src')){
+      modalVideo.src = usingMobileSrc ? MOBILE_SRC : DESKTOP_SRC;
+    }
+    video.pause();                       // free the decoder for mobile
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    modalVideo.muted = false;
+    const p = modalVideo.play(); if (p && p.catch) p.catch(()=>{});
+  }
+  function closeReel(){
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+    modalVideo.pause();
+    ensurePlaying();                     // resume the hero reel
+  }
+  if (fullBtn) fullBtn.addEventListener('click', e => { e.stopPropagation(); openReel(); });
+  modalClose.addEventListener('click', e => { e.stopPropagation(); closeReel(); });
+  modal.addEventListener('click', e => { if (e.target === modal) closeReel(); });
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeReel();
+  });
 
   /* Drag-and-drop a local video → loads it as a same-origin blob so the
      ASCII effect works even when opened as a plain file (file://). */
