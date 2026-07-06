@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IVAN KARAULOV — Cinematographer</title>
-<meta name="description" content="Ivan Karaulov — cinematographer and gaffer based in Toronto. Gaffer on 7+ features including TIFF and Sundance selections; now shooting as a DP.">
+<meta name="description" content="Ivan Karaulov — Toronto based Cinematographer">
 
 <!-- ══════════════════════════════════════════════════════════════
      HOW TO MAKE THIS YOURS
@@ -380,7 +380,8 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
        NOTE: do NOT add crossorigin unless the reel is hosted on a
        DIFFERENT domain that sends CORS headers. For a same-folder
        reel it breaks local (file://) loading. -->
-  <video id="reel" src="reel.mp4" muted loop playsinline preload="auto"></video>
+  <video id="reel" src="reel.mp4" muted loop playsinline autoplay preload="auto"
+         webkit-playsinline x5-playsinline></video>
 
   <div class="hero-hud">
     <div class="hud-top">
@@ -447,7 +448,7 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
           <span class="num">02</span>
           <span class="project-title">Sanzaar - Bagicha</span>
         </span>
-        <span class="project-meta">Fashion film · 16:9</span>
+        <span class="project-meta">Fashion film · dir. Kabir Birk · 16:9</span>
         <span class="watch">
           <span class="lbl">Watch on Vimeo</span><span class="arrow" aria-hidden="true">↗</span>
         </span>
@@ -468,7 +469,7 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
           <span class="num">03</span>
           <span class="project-title">Escape to Saint-Tropez</span>
         </span>
-        <span class="project-meta">Music video · dir. OLEG · 16:9</span>
+        <span class="project-meta">Music video · dir. Sasha Shevchenko · 16:9</span>
         <span class="watch">
           <span class="lbl">Watch on YouTube</span><span class="arrow" aria-hidden="true">↗</span>
         </span>
@@ -486,9 +487,9 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
       <div class="project-head">
         <span class="project-id">
           <span class="num">04</span>
-          <span class="project-title">Mela&amp;Kera</span>
+          <span class="project-title">Mela &amp; Kera</span>
         </span>
-        <span class="project-meta">Commercial · 16:9</span>
+        <span class="project-meta">Commercial · dir. Sasha Shevchenko · 16:9</span>
       </div>
       <div class="stills4">
         <div class="shot"><img src="web_stills/mela_kera1.jpg" alt="Mela&amp;Kera — still 1"></div>
@@ -508,7 +509,7 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
     <div class="about-copy">
       <!-- 4. YOUR BIO -->
       <p>Ivan Karaulov is a Toronto-based cinematographer and gaffer, born in
-      Volgograd, Russia. He started at 13 with BMX videos and by 16 was shooting
+      Volgograd, Russia. He started at 13 with BMX videos and in his early 20s was shooting
       music videos for artists like Pharaoh and Slava KPSS. He lived and worked
       in Moscow before relocating to Toronto in 2018.</p>
       <p>He's worked as a gaffer and key grip on every kind of set — from
@@ -524,16 +525,14 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
     <div class="about-meta">
       <h3>Services</h3>
       <ul>
-        <li>Cinematography / DOP</li>
-        <li>Camera operation</li>
-        <li>Color-aware on-set workflow</li>
+        <li>Cinematographer / DOP</li>
       </ul>
       <h3>Contact</h3>
       <ul>
         <li><a href="mailto:hello@example.com">hello@example.com</a></li>
         <li><a href="https://www.imdb.com/name/nm12017961/" rel="noopener" target="_blank">IMDb ↗</a></li>
-        <li><a href="#" rel="noopener">Vimeo ↗</a></li>
-        <li><a href="#" rel="noopener">Instagram ↗</a></li>
+        <li><a href="https://vimeo.com/user1408498" rel="noopener">Vimeo ↗</a></li>
+        <li><a href="https://www.instagram.com/karaulov_ivan/" rel="noopener">Instagram ↗</a></li>
       </ul>
     </div>
   </div>
@@ -697,6 +696,20 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
   /* — reel detection + toggle — */
   const isFileProto = location.protocol === 'file:';
 
+  /* ── Responsive reel source ───────────────────────────────────────
+     On narrow screens load a lighter file (reel-mobile.mp4, ~720p /
+     2–3 Mbps) to save data and load faster. Falls back to the full
+     reel.mp4 if the mobile file isn't present. Chosen once at load. */
+  const DESKTOP_SRC = video.getAttribute('src') || 'reel.mp4';
+  const MOBILE_SRC  = 'reel-mobile.mp4';
+  const wantsMobile = matchMedia('(max-width: 820px)').matches;
+  let usingMobileSrc = false;
+  if (wantsMobile){
+    usingMobileSrc = true;
+    video.src = MOBILE_SRC;
+    video.load();
+  }
+
   video.addEventListener('canplay', () => {
     hasVideo = true;
     taintFail = false;
@@ -704,11 +717,27 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
     note.textContent = mode === 'video' ? 'Footage playing' : 'ASCII render live';
   });
   video.addEventListener('error', () => {
+    // Mobile file missing? Fall back to the full reel before giving up.
+    if (usingMobileSrc){
+      usingMobileSrc = false;
+      video.src = DESKTOP_SRC;
+      video.load();
+      return;
+    }
     hasVideo = false;
     note.textContent = isFileProto
       ? 'Can\u2019t load over file:// — drag a video here'
       : 'reel.mp4 not found — drop a video here';
   });
+
+  /* Mobile browsers (iOS Safari especially) block autoplay until the user
+     interacts. Start playback on the first tap/click anywhere so the reel
+     actually loads — and so the ASCII has real frames to sample. */
+  function ensurePlaying(){
+    if (hasVideo && video.paused){ const p = video.play(); if (p && p.catch) p.catch(()=>{}); }
+  }
+  ['touchstart','pointerdown','click'].forEach(ev =>
+    addEventListener(ev, ensurePlaying, { once:true, passive:true }));
 
   /* Drag-and-drop a local video → loads it as a same-origin blob so the
      ASCII effect works even when opened as a plain file (file://). */
@@ -752,6 +781,7 @@ footer a:hover{ text-decoration:underline; text-underline-offset:4px; }
     const showing = !hero.classList.contains('showing-video');
     hero.classList.toggle('showing-video', showing);
     setMode(showing ? 'video' : 'ascii');
+    if (showing) ensurePlaying();   // tap-to-reveal must also start it on mobile
   }
 
   // Clicking the button toggles; stop it bubbling to the hero click.
